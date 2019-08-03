@@ -1,34 +1,63 @@
 import React, { Component } from "react";
+import PropTypes from "prop-types";
 import { formatPrice } from "../../helpers";
+import { TransitionGroup, CSSTransition } from "react-transition-group";
 
 export default class Order extends Component {
+  static propTypes = {
+    order: PropTypes.object,
+    fishes: PropTypes.object,
+    removeOrderLine: PropTypes.func
+  };
   orderList = x => {
     const { order, fishes } = this.props;
     const fish = fishes[x];
     const isAvailable = fish && fish.status === "available";
-
-    if (!isAvailable) {
+    const transitionOptions = {
+      classNames: "order",
+      key: x,
+      timeout: { enter: 250, exit: 250 }
+    };
+    // this makes sure the fish are loaded before rendering
+    if (!fish) {
+      return null;
+    } else if (!isAvailable) {
       return (
-        <li>{`Sorry ${fish ? fish.name : "fish"} is no longer available`}</li>
+        <CSSTransition {...transitionOptions}>
+          <li>{`Sorry ${fish ? fish.name : "fish"} is no longer available`}</li>
+        </CSSTransition>
       );
     } else {
       return (
-        <li key={x}>
-          {order[x]}lbs {fishes[x].name}
-          {formatPrice(fishes[x].price * order[x])}
-        </li>
+        <CSSTransition {...transitionOptions}>
+          <li key={x}>
+            <span>
+              <TransitionGroup component="span" className="count">
+                <CSSTransition
+                  classNames="count"
+                  key={order[x]}
+                  timeout={{ enter: 250, exit: 250 }}
+                >
+                  <span>{order[x]}</span>
+                </CSSTransition>
+              </TransitionGroup>
+              lbs {fishes[x].name + " "}
+              {formatPrice(fishes[x].price * order[x])}
+              <button onClick={() => this.props.removeOrderLine(x)}>
+                &times;
+              </button>
+            </span>
+          </li>
+        </CSSTransition>
       );
     }
   };
   render() {
     const { order, fishes } = this.props;
-
     const orderKeys = Object.keys(order);
     const total = orderKeys.reduce((acc, curr) => {
       const fish = fishes[curr];
       const count = order[curr];
-      console.log(order[curr]);
-      console.log(curr);
       const isAvailable = fish && fish.status === "available";
       if (isAvailable) {
         return acc + fish.price * count;
@@ -40,7 +69,9 @@ export default class Order extends Component {
     return (
       <div className="order-wrapper">
         <h2>Your Order</h2>
-        <ul className="order">{orderKeys.map(this.orderList)}</ul>
+        <TransitionGroup component="ul" className="order">
+          {orderKeys.map(this.orderList)}
+        </TransitionGroup>
         <div className="total">
           Total:
           <strong>{formatPrice(total)}</strong>
